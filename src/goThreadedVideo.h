@@ -41,6 +41,8 @@ public:
 
 	bool 				isFrameNew();
 	bool				isPlaying(); // added gameover
+	bool				isLoaded();
+	bool				isLoading();
 	unsigned char * 	getPixels();
 	float 				getPosition();
 	float 				getSpeed();
@@ -53,6 +55,7 @@ public:
 	void				setPan(float pan); // added gameover
 	void				setVolume(int volume);
 	void 				setLoopState(int state);
+	int					getLoopState();
 	void   				setSpeed(float speed);
 	void				setFrame(int frame);
 
@@ -65,7 +68,8 @@ public:
 	void				resetAnchor();
 
 	void 				setPaused(bool bPause);
-
+	void				togglePaused();
+	
 	int					getCurrentFrame();
 	int					getTotalNumFrames();
 
@@ -96,7 +100,7 @@ private:
 
 	string				name[2];
 
-	int					currentVideo, cueVideo, videoRequests;
+	int					currentVideo, cueVideo, videoRequests, loopState;
 
 	bool				loaded[2], textured[2], swapVideo, firstLoad;
 
