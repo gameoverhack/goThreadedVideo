@@ -277,6 +277,7 @@ void goThreadedVideo::close() {
 		textured[0] = textured[0] = true;	// otherwise the whole toggling thing doesn;t work...
 		firstLoad = true;					// but we use this firstLoad variable to let us know that's what happening
 		swapVideo = false;
+		loading = false;
 	//}
 }
 bool goThreadedVideo::isFrameNew() {
