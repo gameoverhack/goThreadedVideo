@@ -15,7 +15,7 @@
 #define _GO_THREADED_VIDEO
 
 #include "ofxThread.h"
-#include "ofEvents.h"
+#include "ofMain.h"
 #include "string.h"
 
 #include "goVideoPlayer.h"

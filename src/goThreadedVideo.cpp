@@ -70,7 +70,7 @@ bool goThreadedVideo::loadMovie(string _name) {
 
 			name[cueVideo] = _name;								// set the video to load name
 
-			cout << "Loading: " << _name << endl;
+			if (verbose) cout << "Loading: " << _name << endl;
 
 			video[cueVideo]->setUseTexture(false);				// make sure the texture is turned off or else the thread crashes: openGL is thread safe!
 
@@ -107,10 +107,16 @@ void goThreadedVideo::threadedFunction() {
 
 	stopThread();										// immediately stop the thread
 
-	video[cueVideo]->loadMovie(name[cueVideo], true);	// load the movie
-	video[cueVideo]->play();							// and start playing it
-	setLoopState(OF_LOOP_NORMAL);
-	loaded[cueVideo] = true;							// set flag that the video is loaded
+	bool ok = video[cueVideo]->loadMovie(name[cueVideo], true);	// load the movie
+	if (ok) {
+		video[cueVideo]->play();							// and start playing it
+		video[cueVideo]->setLoopState(OF_LOOP_NORMAL);
+		loaded[cueVideo] = true;							// set flag that the video is loaded
+	} else {
+		int c = 3;
+		ofNotifyEvent(error, c);
+	}
+
 
 }
 
@@ -163,8 +169,9 @@ void goThreadedVideo::draw(int x, int y, int w, int h) {
 			// before swapping indexs between cue and current in the video[] player array
 
 			video[cueVideo]->draw(x, y, w, h);
+			cout << "who is calling me?" << endl;
 			video[(videoRequests + 1) % 2]->close();
-
+			
 			currentVideo = cueVideo;
 			name[currentVideo] = name[cueVideo];
 
@@ -436,7 +443,7 @@ float goThreadedVideo::getWidth() {
 ofTexture & goThreadedVideo::getTextureReference() {
     //if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getTextureReference();
-	//} else return 0;
+	//} else return 0
 }
 
 goVideoPlayer & goThreadedVideo::getVideoReference() {
