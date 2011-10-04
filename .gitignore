@@ -1,0 +1,8 @@
+*.bin
+*.mov
+*.jpg
+
+*.app/
+*.o
+*.exe
+.DS_Store

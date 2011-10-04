@@ -14,15 +14,39 @@
 #ifndef _GO_THREADED_VIDEO
 #define _GO_THREADED_VIDEO
 
-#include "ofxThread.h"
+// USE_QUEUE = flip-flop que -> if load is not available we can
+// flip the request to the waiting goVideoPlayer instance...
+// NB: this is not a que in the true sense of the word as
+// successive calls to loadMovie will simply lead to previous
+// requests being overwritten...in some instances it might be
+// not to allow this to happen in which case comment out this:
+#define USE_QUEUE
+
+// not implemented fully DON"T CHANGE -> working toward full enque system
+#define MAX_VIDEOS 2
+
 #include "ofMain.h"
 #include "string.h"
 
+#if OF_VERSION < 7
+#include "ofxThread.h"
+#endif
+
 #include "goVideoPlayer.h"
 
+enum goThreadedVideoError {
+    GO_TV_UPDATE_BLOCKED,
+    GO_TV_LOAD_BLOCKED,
+    GO_TV_ENQUE_BLOCKED,
+    GO_TV_DEQUE_BLOCKED,
+    GO_TV_MOVIE_ERROR
+};
 
+#if OF_VERSION < 7
 class goThreadedVideo : public ofxThread {
-
+#else
+class goThreadedVideo : public ofThread {
+#endif
 public:
 
 	goThreadedVideo();
@@ -69,7 +93,7 @@ public:
 
 	void 				setPaused(bool bPause);
 	void				togglePaused();
-	
+
 	int					getCurrentFrame();
 	int					getTotalNumFrames();
 
@@ -82,9 +106,9 @@ public:
 
 	string				getCurrentlyPlaying(); // returns name of current mivie playing
 
-	bool				verbose;
+	//bool				verbose; //deprecated use ofSetLogLevel(OF_LOG_VERBOSE)
 
-    ofEvent<string>     loadDone;
+    ofEvent<string>     success;
     ofEvent<int>        error;
 
     void psuedoUpdate();
@@ -96,15 +120,25 @@ protected:
 
 private:
 
-    goVideoPlayer	*	video[2];
+    goVideoPlayer	*	video[MAX_VIDEOS];
 
-	string				name[2];
+	string				name[MAX_VIDEOS];
 
 	int					currentVideo, cueVideo, videoRequests, loopState;
 
-	bool				loaded[2], textured[2], swapVideo, firstLoad;
+	bool				loaded[MAX_VIDEOS], textured[MAX_VIDEOS], swapVideo, firstLoad;
 
 	void                threadedFunction();
+#ifdef USE_QUEUE
+    void                pushQueue(string _name);
+    void                popQueue();
+
+    goThreadedVideo*    queue;
+
+#endif
+	//goThreadedVideo*    queue[MAX_VIDEOS_IN_QUE];
+	//int                 top;
+
 };
 
 #endif

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_layout_file>
+	<ActiveTarget name="release" />
+	<File name="..\..\..\addons\goThreadedVideo\src\goThreadedVideo.cpp" open="1" top="0" tabpos="6">
+		<Cursor position="4295" topLine="102" />
+	</File>
+	<File name="..\..\..\addons\goThreadedVideo\src\goThreadedVideo.h" open="1" top="0" tabpos="4">
+		<Cursor position="1033" topLine="0" />
+	</File>
+	<File name="..\..\..\addons\goVideoPlayer\src\goQtUtils.cpp" open="1" top="0" tabpos="11">
+		<Cursor position="1515" topLine="30" />
+	</File>
+	<File name="..\..\..\addons\goVideoPlayer\src\goQtUtils.h" open="1" top="0" tabpos="10">
+		<Cursor position="1019" topLine="16" />
+	</File>
+	<File name="..\..\..\addons\goVideoPlayer\src\goVideoPlayer.cpp" open="1" top="0" tabpos="8">
+		<Cursor position="14139" topLine="477" />
+	</File>
+	<File name="..\..\..\addons\goVideoPlayer\src\goVideoPlayer.h" open="1" top="0" tabpos="9">
+		<Cursor position="185" topLine="0" />
+	</File>
+	<File name="src\main.cpp" open="1" top="0" tabpos="15">
+		<Cursor position="227" topLine="0" />
+	</File>
+	<File name="src\testApp.cpp" open="1" top="1" tabpos="2">
+		<Cursor position="206" topLine="0" />
+	</File>
+	<File name="src\testApp.h" open="1" top="0" tabpos="1">
+		<Cursor position="553" topLine="0" />
+	</File>
+</CodeBlocks_layout_file>

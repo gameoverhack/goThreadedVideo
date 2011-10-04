@@ -15,39 +15,38 @@
 
 static bool loading = false;
 
+//--------------------------------------------------------------
 goThreadedVideo::goThreadedVideo() {
 
 	verbose = false;
 
-	video[0] = new goVideoPlayer();		// set up the two video players (NB: this won't work with standard ofVideoPlayer!)
-	video[1] = new goVideoPlayer();
+    for (int i = 0; i < MAX_VIDEOS; i++) {
+        video[i] = new goVideoPlayer();		// set up the two video players (NB: this won't work with standard ofVideoPlayer!)
+        name[i] = "";
+        loaded[i] = true;		// for the first load we pretend that actually something is already loaded
+        textured[i] = true;	// otherwise the whole toggling thing doesn;t work...
+    }
 
-	name[0] = name[1] = "";
-	
 	currentVideo = cueVideo = 0;		// used to keep track of toggling between 0 and 1 in the video[] player array
 
 	videoRequests = 1;
-
-	loaded[0] = loaded[1] = true;		// for the first load we pretend that actually something is already loaded
-	textured[0] = textured[0] = true;	// otherwise the whole toggling thing doesn;t work...
 
 	firstLoad = true;					// but we use this firstLoad variable to let us know that's what happening
 	swapVideo = false;
 }
 
+//--------------------------------------------------------------
 goThreadedVideo::~goThreadedVideo() {
 
 	// close the videos and clean up RAM
-    name[0] = name[1] = "";
-    videoRequests = NULL;
-
-	delete video[0];
-	delete video[1];
-
-	video[0] = video[1] = NULL;
+	for (int i = 0; i < MAX_VIDEOS; i++) {
+        delete video[i];
+        video[i] = NULL;
+	}
 
 }
 
+//--------------------------------------------------------------
 bool goThreadedVideo::loadMovie(string _name) {
 
 	// make sure that...
@@ -63,14 +62,14 @@ bool goThreadedVideo::loadMovie(string _name) {
 
 		videoRequests++;				// use a counter to switch between cue and current video[] player indexs
 
-		if(videoRequests % 2 != currentVideo || firstLoad) {	// ie., this toggles which of the video[] players is
+		if(videoRequests % MAX_VIDEOS != currentVideo || firstLoad) {	// ie., this toggles which of the video[] players is
 			// the cue or current index (also handles a "firstload")
 
-			cueVideo = videoRequests % 2;						// set the cueVideo index
+			cueVideo = videoRequests % MAX_VIDEOS;				// set the cueVideo index
 
 			name[cueVideo] = _name;								// set the video to load name
 
-			if (verbose) cout << "Loading: " << _name << endl;
+			ofLog(OF_LOG_VERBOSE, "Loading: " + _name);
 
 			video[cueVideo]->setUseTexture(false);				// make sure the texture is turned off or else the thread crashes: openGL is thread safe!
 
@@ -85,21 +84,69 @@ bool goThreadedVideo::loadMovie(string _name) {
 			// have to wait one cycle between the thread terminating and the texture
 			// being "forced" back on - otherwise openGL + thread = crash...
 
-			if(verbose) cout << "Load BLOCKED by reload before draw/update" << endl;
-			int c = 0;
-			ofNotifyEvent(error, c);
+			ofLog(OF_LOG_VERBOSE, "Load BLOCKED by reload before draw/update");
+			int err = GO_TV_UPDATE_BLOCKED;
+			ofNotifyEvent(error, err);
 			return false;
 		}
 
 	} else {													// ELSE: either we're already loading in this instance OR another instance
 
-		if(verbose) cout << "Load BLOCKED by already thread loading" << endl;
-		int c = 1;
-        ofNotifyEvent(error, c);
+		ofLog(OF_LOG_VERBOSE, "Load BLOCKED by already thread loading...attempting to enqueue");
+#ifdef USE_QUEUE
+		pushQueue(_name);
+		return true;
+#else
+		int err = GO_TV_LOAD_BLOCKED;
+        ofNotifyEvent(error, err);
 		return false;
+#endif
 	}
 }
 
+#ifdef USE_QUEUE
+
+// flip-flop que -> if load is not available we can
+// flip the request to the waiting goVideoPlayer instance...
+// see note at top of goThreadedVideo.h
+// thanks to briangibson for this suggestion:
+// http://forum.openframeworks.cc/index.php/topic,1335.msg32416.html#msg32416
+
+//--------------------------------------------------------------
+void goThreadedVideo::pushQueue(string _name) {
+
+    if(queue != this){
+        ofLog(OF_LOG_VERBOSE, "...SUCCESS enqueing: " + _name);
+        cueVideo = videoRequests % MAX_VIDEOS;
+        name[cueVideo] = _name;
+        queue = this;
+    } else {
+        ofLog(OF_LOG_VERBOSE, "...FAILED to enqueue: " + _name + "(discarding)");
+        int err = GO_TV_ENQUE_BLOCKED;
+        ofNotifyEvent(error, err);
+    }
+
+}
+
+//--------------------------------------------------------------
+void goThreadedVideo::popQueue() {
+
+    if(queue != NULL){
+        ofLog(OF_LOG_VERBOSE, "...ATTEMPTING deque...");
+        if(queue->loadMovie(queue->name[queue->cueVideo])) {
+            ofLog(OF_LOG_VERBOSE, "...SUCCESS deque");
+            queue = NULL;
+        } else {
+            ofLog(OF_LOG_VERBOSE, "...FAILED to dequeue");
+            int err = GO_TV_DEQUE_BLOCKED;
+            ofNotifyEvent(error, err);
+        }
+    }
+
+}
+#endif
+
+//--------------------------------------------------------------
 void goThreadedVideo::threadedFunction() {
 
 	// this is where we load the video in a thread
@@ -113,13 +160,14 @@ void goThreadedVideo::threadedFunction() {
 		video[cueVideo]->setLoopState(OF_LOOP_NORMAL);
 		loaded[cueVideo] = true;							// set flag that the video is loaded
 	} else {
-		int c = 3;
-		ofNotifyEvent(error, c);
+		int err = GO_TV_MOVIE_ERROR;
+		ofNotifyEvent(error, err);
 	}
 
 
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::update() {
 
 	// make sure the thread has finished and that we have a loaded 'cue' video that has NOT been textured
@@ -152,12 +200,16 @@ void goThreadedVideo::update() {
 		video[currentVideo]->update();
 	}
 
+	if(!loading) popQueue();
+
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::draw(float x, float y) {
 	draw(x, y, width, height);
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::draw(int x, int y, int w, int h) {
 
 	// make sure we are both loaded and textured
@@ -169,9 +221,8 @@ void goThreadedVideo::draw(int x, int y, int w, int h) {
 			// before swapping indexs between cue and current in the video[] player array
 
 			video[cueVideo]->draw(x, y, w, h);
-			cout << "who is calling me?" << endl;
-			video[(videoRequests + 1) % 2]->close();
-			
+			video[(videoRequests + 1) % MAX_VIDEOS]->close();
+
 			currentVideo = cueVideo;
 			name[currentVideo] = name[cueVideo];
 
@@ -182,7 +233,7 @@ void goThreadedVideo::draw(int x, int y, int w, int h) {
 			swapVideo = false;
 			loading = false;							// this is the end of a complete "load" - let's free all instances to load now!!
 
-            ofNotifyEvent(loadDone, name[currentVideo]);
+            ofNotifyEvent(success, name[currentVideo]);
 
 		} else {
 
@@ -194,64 +245,55 @@ void goThreadedVideo::draw(int x, int y, int w, int h) {
 	}
 }
 
-void goThreadedVideo::psuedoUpdate()
-{
+//--------------------------------------------------------------
+void goThreadedVideo::psuedoUpdate() {
     if(!isThreadRunning() && loaded[cueVideo] && !textured[cueVideo]) {
-		
+
 		// setup the videos texture and force the
 		// first frame of the texture to upload
 		// (this required changes to ofVideoPlayer, see goVideoPlayer)
-		
+
 		video[cueVideo]->forceTextureUpload();
 		video[cueVideo]->setUseTexture(true);
-		
+
 		// unless it's the very fist load, lets pause the current video
 		if(!firstLoad) {
 			video[currentVideo]->setPaused(true);
 		} else firstLoad = false;
-		
+
 		// force an update of the cue'd videos frame
 		//video[cueVideo]->update();
-		
+
 		// update texture flags and set swapVideo flag to do a
 		// "flickerless" change between cue and current video[] players
 		textured[cueVideo] = true;
 		swapVideo = true;
-		
-		//cout << "psudeUpdated" << endl;
-		
-	} //else cout << "NOT psudeUpdated" << endl;
+
+	}
+
+	if(!loading) popQueue();
 }
 
-void goThreadedVideo::psuedoDraw()
-{
+//--------------------------------------------------------------
+void goThreadedVideo::psuedoDraw() {
+
     if(loaded[currentVideo] && textured[currentVideo]) {
-		
+
 		if(swapVideo) {									// the video is loaded but we now toggle the cue and current video[] player index's
-			
-			// to get flickerless loading we draw one frame using the cue index
-			// before swapping indexs between cue and current in the video[] player array
-			
-			//video[cueVideo]->draw(0, 0, width, height);
-			//video[(videoRequests + 1) % 2]->close();
-			
+
 			currentVideo = cueVideo;
 			name[currentVideo] = name[cueVideo];
-			
+
 			width = video[currentVideo]->width;
 			height = video[currentVideo]->height;
 			speed = video[currentVideo]->speed;
-			
+
 			swapVideo = false;
 			loading = false;							// this is the end of a complete "load" - let's free all instances to load now!!
-			
-            ofNotifyEvent(loadDone, name[currentVideo]);
-			
-			
-			//cout << "psudeDraw n Swapped" << endl;
-			
-		} //else cout << "NOT psudeDraw n Swapped" << endl;
-		
+
+            ofNotifyEvent(success, name[currentVideo]);
+
+		}
 	}
 }
 
@@ -263,17 +305,21 @@ void goThreadedVideo::psuedoDraw()
  *
  */
 
-
+//--------------------------------------------------------------
 void goThreadedVideo::play() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->play();
 	}
 }
+
+//--------------------------------------------------------------
 void goThreadedVideo::stop() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->stop();
 	}
 }
+
+//--------------------------------------------------------------
 void goThreadedVideo::close() {
 	//if(loaded[currentVideo] && textured[currentVideo]) {
 		video[0]->close();
@@ -287,65 +333,78 @@ void goThreadedVideo::close() {
 		loading = false;
 	//}
 }
+
+//--------------------------------------------------------------
 bool goThreadedVideo::isFrameNew() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->isFrameNew();
 	} else return false;
 }
+
+//--------------------------------------------------------------
 unsigned char * goThreadedVideo::getPixels() {
 	//if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getPixels();
 	//} else return 0; // maybe should be -1 so we know something is loading??
 }
 
+//--------------------------------------------------------------
 float goThreadedVideo::getPosition() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getPosition();
 	} else return 0; // maybe should be -1 so we know something is loading??
 }
 
+//--------------------------------------------------------------
 float goThreadedVideo::getSpeed() {
 	//if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getSpeed();
 	//} else return 0; // maybe should be -1 so we know something is loading??
 }
 
+//--------------------------------------------------------------
 float goThreadedVideo::getDuration() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getDuration();
 	} else return 0; // maybe should be -1 so we know something is loading??
 }
 
+//--------------------------------------------------------------
 int goThreadedVideo::getCurrentFrame() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getCurrentFrame();
 	} else return 0; // maybe should be -1 so we know something is loading??
 }
 
+//--------------------------------------------------------------
 int goThreadedVideo::getTotalNumFrames() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getTotalNumFrames();
 	} else return 0;
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setPosition(float pct){
 	//if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setPosition(pct);
 	//}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setVolume(int volume) {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setVolume(volume);
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setPan(float pan) {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setPan(pan);
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setLoopState(int state) {
 	//if(loaded[currentVideo] && textured[currentVideo]) {
 		loopState = state;
@@ -353,124 +412,145 @@ void goThreadedVideo::setLoopState(int state) {
 	//}
 }
 
+//--------------------------------------------------------------
 int goThreadedVideo::getLoopState() {
 	return loopState;
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setSpeed(float speed) {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setSpeed(speed);
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setFrame(int frame) {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setFrame(frame);
 	}
 }
 
+//--------------------------------------------------------------
 bool goThreadedVideo::getIsMovieDone() {
 	if(loaded[currentVideo] && textured[currentVideo] && !firstLoad) {
 		return video[currentVideo]->getIsMovieDone();
 	} else return false;
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setUseTexture(bool bUse) {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setUseTexture(bUse);
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setAnchorPercent(float xPct, float yPct) {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setAnchorPercent(xPct, yPct);
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setAnchorPoint(int x, int y) {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setAnchorPoint(x, y);
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::resetAnchor() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->resetAnchor();
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::setPaused(bool bPause) {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setPaused(bPause);
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::togglePaused() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->togglePaused();
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::firstFrame() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->firstFrame();
 	}
 }
+
+//--------------------------------------------------------------
 void goThreadedVideo::nextFrame() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->nextFrame();
 	}
 }
 
+//--------------------------------------------------------------
 void goThreadedVideo::previousFrame() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->previousFrame();
 	}
 }
 
+//--------------------------------------------------------------
 float goThreadedVideo::getHeight() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getHeight();
 	} else return 0; // maybe should be -1 so we know something is loading??
 }
 
+//--------------------------------------------------------------
 float goThreadedVideo::getWidth() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getWidth();
 	} else return 0; // maybe should be -1 so we know something is loading??
 }
 
+//--------------------------------------------------------------
 ofTexture & goThreadedVideo::getTextureReference() {
     //if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getTextureReference();
 	//} else return 0
 }
 
+//--------------------------------------------------------------
 goVideoPlayer & goThreadedVideo::getVideoReference() {
     //if(loaded[currentVideo] && textured[currentVideo]) {
 		return *video[currentVideo];
 	//} else return 0;
 }
 
-
+//--------------------------------------------------------------
 bool goThreadedVideo::isPlaying() {
 	if(loaded[currentVideo] && textured[currentVideo] && !firstLoad) {
 		return video[currentVideo]->isPlaying();
 	} else return false;
 }
 
+//--------------------------------------------------------------
 string goThreadedVideo::getCurrentlyPlaying() {
 	//if(loaded[currentVideo] && textured[currentVideo]) {
 		return name[currentVideo];
 	//} return "";
 }
 
+//--------------------------------------------------------------
 bool goThreadedVideo::isLoaded() {
 	if (!loading) {
 		return loaded[currentVideo] && textured[currentVideo];
 	} else return false;
 }
 
+//--------------------------------------------------------------
 bool goThreadedVideo::isLoading() {
 	return loading;
 }
