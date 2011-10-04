@@ -5,7 +5,7 @@ void testApp::setup(){
 
     ofSetLogLevel(OF_LOG_VERBOSE);
     dir.allowExt("mov");
-	numberOfMovies = dir.listDir("//<put your directory with videos here>");
+	numberOfMovies = dir.listDir("<put your directory with videos here>");
 	count = 0;
 
 }
