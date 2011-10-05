@@ -20,7 +20,7 @@
 // successive calls to loadMovie will simply lead to previous
 // requests being overwritten...in some instances it might be
 // not to allow this to happen in which case comment out this:
-#define USE_QUEUE
+//#define USE_QUEUE
 
 // not implemented fully DON"T CHANGE -> working toward full enque system
 #define MAX_VIDEOS 2
@@ -74,6 +74,9 @@ public:
 	bool				getIsMovieDone();
 	ofTexture &         getTextureReference();
     goVideoPlayer &     getVideoReference();
+
+    goPixelType         getPixelType();
+    void                setPixelType(goPixelType _pixelType);
 
 	void 				setPosition(float pct);
 	void				setPan(float pan); // added gameover

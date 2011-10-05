@@ -199,9 +199,9 @@ void goThreadedVideo::update() {
 	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->update();
 	}
-
+#ifdef USE_QUE
 	if(!loading) popQueue();
-
+#endif
 }
 
 //--------------------------------------------------------------
@@ -247,6 +247,7 @@ void goThreadedVideo::draw(int x, int y, int w, int h) {
 
 //--------------------------------------------------------------
 void goThreadedVideo::psuedoUpdate() {
+
     if(!isThreadRunning() && loaded[cueVideo] && !textured[cueVideo]) {
 
 		// setup the videos texture and force the
@@ -271,7 +272,10 @@ void goThreadedVideo::psuedoUpdate() {
 
 	}
 
+#ifdef USE_QUE
 	if(!loading) popQueue();
+#endif
+
 }
 
 //--------------------------------------------------------------
@@ -415,6 +419,16 @@ void goThreadedVideo::setLoopState(int state) {
 //--------------------------------------------------------------
 int goThreadedVideo::getLoopState() {
 	return loopState;
+}
+
+//--------------------------------------------------------
+void goThreadedVideo::setPixelType(goPixelType _pixelType) {
+    video[currentVideo]->setPixelType(_pixelType);
+}
+
+//--------------------------------------------------------
+goPixelType goThreadedVideo::getPixelType() {
+    return video[currentVideo]->getPixelType();;
 }
 
 //--------------------------------------------------------------
