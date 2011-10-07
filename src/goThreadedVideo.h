@@ -56,6 +56,7 @@ public:
 
 	bool				loadMovie(string _name);
 
+    void                setup();
 	void				update(); // same as idlemovie
 	void 				play();
 	void 				stop();
@@ -132,6 +133,9 @@ private:
 	bool				loaded[MAX_VIDEOS], textured[MAX_VIDEOS], swapVideo, firstLoad;
 
 	void                threadedFunction();
+
+	bool                isSetup;
+
 #ifdef USE_QUEUE
     void                pushQueue(string _name);
     void                popQueue();

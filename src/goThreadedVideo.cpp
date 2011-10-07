@@ -17,6 +17,23 @@ static bool loading = false;
 
 //--------------------------------------------------------------
 goThreadedVideo::goThreadedVideo() {
+    isSetup = false;
+}
+
+//--------------------------------------------------------------
+goThreadedVideo::~goThreadedVideo() {
+
+    if (isSetup) {
+        // close the videos and clean up RAM
+        for (int i = 0; i < MAX_VIDEOS; i++) {
+            delete video[i];
+            video[i] = NULL;
+        }
+    }
+
+}
+
+void goThreadedVideo::setup() {
 
 	verbose = false;
 
@@ -33,21 +50,13 @@ goThreadedVideo::goThreadedVideo() {
 
 	firstLoad = true;					// but we use this firstLoad variable to let us know that's what happening
 	swapVideo = false;
-}
-
-//--------------------------------------------------------------
-goThreadedVideo::~goThreadedVideo() {
-
-	// close the videos and clean up RAM
-	for (int i = 0; i < MAX_VIDEOS; i++) {
-        delete video[i];
-        video[i] = NULL;
-	}
-
+	isSetup = true;
 }
 
 //--------------------------------------------------------------
 bool goThreadedVideo::loadMovie(string _name) {
+
+    if (!isSetup) setup();
 
 	// make sure that...
 	if(!isThreadRunning()				// ...the thread is not already running...
@@ -423,7 +432,9 @@ int goThreadedVideo::getLoopState() {
 
 //--------------------------------------------------------
 void goThreadedVideo::setPixelType(goPixelType _pixelType) {
-    video[currentVideo]->setPixelType(_pixelType);
+    if (!isSetup) setup();
+    video[0]->setPixelType(_pixelType);
+    video[1]->setPixelType(_pixelType);
 }
 
 //--------------------------------------------------------
