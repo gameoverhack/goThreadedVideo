@@ -191,7 +191,7 @@ void goThreadedVideo::update() {
 
 		// unless it's the very fist load, lets pause the current video
 		if(!firstLoad) {
-			video[currentVideo]->setPaused(true);
+			//video[currentVideo]->setPaused(true);
 		} else firstLoad = false;
 
 		// force an update of the cue'd videos frame
@@ -268,7 +268,7 @@ void goThreadedVideo::psuedoUpdate() {
 
 		// unless it's the very fist load, lets pause the current video
 		if(!firstLoad) {
-			video[currentVideo]->setPaused(true);
+			//video[currentVideo]->setPaused(true);
 		} else firstLoad = false;
 
 		// force an update of the cue'd videos frame
