@@ -165,6 +165,7 @@ void goThreadedVideo::threadedFunction() {
 
 	bool ok = video[cueVideo]->loadMovie(name[cueVideo], true);	// load the movie
 	if (ok) {
+	    video[cueVideo]->setVolume(-256);
 		video[cueVideo]->play();							// and start playing it
 		video[cueVideo]->setLoopState(OF_LOOP_NORMAL);
 		loaded[cueVideo] = true;							// set flag that the video is loaded
@@ -211,6 +212,11 @@ void goThreadedVideo::update() {
 #ifdef USE_QUE
 	if(!loading) popQueue();
 #endif
+}
+
+//--------------------------------------------------------------
+void goThreadedVideo::draw() {
+	draw(0, 0, width, height);
 }
 
 //--------------------------------------------------------------
@@ -369,6 +375,11 @@ float goThreadedVideo::getPosition() {
 }
 
 //--------------------------------------------------------------
+int goThreadedVideo::getVolume() {
+    if(loaded[currentVideo]) return video[currentVideo]->getVolume();
+}
+
+//--------------------------------------------------------------
 float goThreadedVideo::getSpeed() {
 	//if(loaded[currentVideo] && textured[currentVideo]) {
 		return video[currentVideo]->getSpeed();
@@ -405,7 +416,7 @@ void goThreadedVideo::setPosition(float pct){
 
 //--------------------------------------------------------------
 void goThreadedVideo::setVolume(int volume) {
-	if(loaded[currentVideo] && textured[currentVideo]) {
+	if(loaded[currentVideo]) {
 		video[currentVideo]->setVolume(volume);
 	}
 }
@@ -450,9 +461,9 @@ void goThreadedVideo::setSpeed(float speed) {
 }
 
 //--------------------------------------------------------------
-void goThreadedVideo::setFrame(int frame) {
-	if(loaded[currentVideo] && textured[currentVideo]) {
-		video[currentVideo]->setFrame(frame);
+void goThreadedVideo::setFrame(int frame, bool noPause) {
+	if(loaded[currentVideo]) {
+		video[currentVideo]->setFrame(frame, noPause);
 	}
 }
 

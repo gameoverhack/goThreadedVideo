@@ -70,6 +70,7 @@ public:
 	bool				isLoading();
 	unsigned char * 	getPixels();
 	float 				getPosition();
+	int                 getVolume();
 	float 				getSpeed();
 	float 				getDuration();
 	bool				getIsMovieDone();
@@ -85,11 +86,12 @@ public:
 	void 				setLoopState(int state);
 	int					getLoopState();
 	void   				setSpeed(float speed);
-	void				setFrame(int frame);
+	void				setFrame(int frame, bool noPause = false);
 
 	void 				setUseTexture(bool bUse);
+	void                draw();
+    void 				draw(float x, float y);
 	void				draw(int x, int y, int w, int h);
-	void 				draw(float x, float y);
 
 	void				setAnchorPercent(float xPct, float yPct);
 	void				setAnchorPoint(int x, int y);
