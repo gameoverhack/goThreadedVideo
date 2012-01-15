@@ -34,7 +34,7 @@
 
 #include "goVideoPlayer.h"
 
-enum goThreadedVideoError {
+enum goVideoError {
     GO_TV_UPDATE_BLOCKED,
     GO_TV_LOAD_BLOCKED,
     GO_TV_ENQUE_BLOCKED,
@@ -112,8 +112,8 @@ public:
 
 	//bool				verbose; //deprecated use ofSetLogLevel(OF_LOG_VERBOSE)
 
-    ofEvent<string>     success;
-    ofEvent<int>        error;
+    ofEvent<string> success;
+    ofEvent<goVideoError> error;
 
     void psuedoUpdate();
     void psuedoDraw();

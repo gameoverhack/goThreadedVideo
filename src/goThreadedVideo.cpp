@@ -18,6 +18,7 @@ static bool loading = false;
 //--------------------------------------------------------------
 goThreadedVideo::goThreadedVideo() {
     isSetup = false;
+    loopState =OF_LOOP_NORMAL;
 }
 
 //--------------------------------------------------------------
@@ -94,7 +95,7 @@ bool goThreadedVideo::loadMovie(string _name) {
 			// being "forced" back on - otherwise openGL + thread = crash...
 
 			ofLog(OF_LOG_VERBOSE, "Load BLOCKED by reload before draw/update");
-			int err = GO_TV_UPDATE_BLOCKED;
+			goVideoError err = GO_TV_UPDATE_BLOCKED;
 			ofNotifyEvent(error, err);
 			return false;
 		}
@@ -106,7 +107,7 @@ bool goThreadedVideo::loadMovie(string _name) {
 		pushQueue(_name);
 		return true;
 #else
-		int err = GO_TV_LOAD_BLOCKED;
+		goVideoError err = GO_TV_LOAD_BLOCKED;
         ofNotifyEvent(error, err);
 		return false;
 #endif
@@ -131,7 +132,7 @@ void goThreadedVideo::pushQueue(string _name) {
         queue = this;
     } else {
         ofLog(OF_LOG_VERBOSE, "...FAILED to enqueue: " + _name + "(discarding)");
-        int err = GO_TV_ENQUE_BLOCKED;
+        goVideoError err = GO_TV_ENQUE_BLOCKED;
         ofNotifyEvent(error, err);
     }
 
@@ -147,7 +148,7 @@ void goThreadedVideo::popQueue() {
             queue = NULL;
         } else {
             ofLog(OF_LOG_VERBOSE, "...FAILED to dequeue");
-            int err = GO_TV_DEQUE_BLOCKED;
+            goVideoError err = GO_TV_DEQUE_BLOCKED;
             ofNotifyEvent(error, err);
         }
     }
@@ -166,10 +167,10 @@ void goThreadedVideo::threadedFunction() {
 	bool ok = video[cueVideo]->loadMovie(name[cueVideo], true);	// load the movie
 	if (ok) {
 		video[cueVideo]->play();							// and start playing it
-		video[cueVideo]->setLoopState(OF_LOOP_NORMAL);
+		video[cueVideo]->setLoopState(loopState);
 		loaded[cueVideo] = true;							// set flag that the video is loaded
 	} else {
-		int err = GO_TV_MOVIE_ERROR;
+		goVideoError err = GO_TV_MOVIE_ERROR;
 		ofNotifyEvent(error, err);
 	}
 
@@ -419,10 +420,10 @@ void goThreadedVideo::setPan(float pan) {
 
 //--------------------------------------------------------------
 void goThreadedVideo::setLoopState(int state) {
-	//if(loaded[currentVideo] && textured[currentVideo]) {
-		loopState = state;
+    loopState = state;
+	if(loaded[currentVideo] && textured[currentVideo]) {
 		video[currentVideo]->setLoopState(state);
-	//}
+	}
 }
 
 //--------------------------------------------------------------
